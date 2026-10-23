@@ -1,36 +1,100 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+const tasks = ref([]);
 const newTask = ref("");
-
-const tasks = ref([
-  { id: 1, title: "Izraditi dizajn stranice", done: true },
-  { id: 2, title: "Dodati navigaciju", done: true },
-  { id: 3, title: "Povezati API", done: false },
-  { id: 4, title: "Testirati aplikaciju", done: false },
-]);
+const error = ref("");
 
 const completed = computed(
   () => tasks.value.filter((task) => task.done).length,
 );
 
-function addTask() {
-  const title = newTask.value.trim();
+async function loadTasks() {
+  try {
+    error.value = "";
 
+    const response = await fetch(`${API_URL}/api/tasks`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    tasks.value = await response.json();
+  } catch (err) {
+    error.value = `Ne mogu dohvatiti zadatke: ${err.message}`;
+    console.error(err);
+  }
+}
+
+async function addTask() {
+  const title = newTask.value.trim();
   if (!title) return;
 
-  tasks.value.push({
-    id: Date.now(),
-    title,
-    done: false,
-  });
+  try {
+    const response = await fetch(`${API_URL}/api/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
 
-  newTask.value = "";
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const task = await response.json();
+    tasks.value.push(task);
+    newTask.value = "";
+    error.value = "";
+  } catch (err) {
+    error.value = `Dodavanje nije uspjelo: ${err.message}`;
+  }
 }
 
-function deleteTask(id) {
-  tasks.value = tasks.value.filter((task) => task.id !== id);
+async function toggleTask(task) {
+  try {
+    const response = await fetch(`${API_URL}/api/tasks/${task.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ done: task.done }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const updatedTask = await response.json();
+
+    tasks.value = tasks.value.map((item) =>
+      item.id === updatedTask.id ? updatedTask : item,
+    );
+
+    error.value = "";
+  } catch (err) {
+    task.done = !task.done;
+    error.value = `Izmjena nije uspjela: ${err.message}`;
+  }
 }
+
+async function deleteTask(id) {
+  try {
+    const response = await fetch(`${API_URL}/api/tasks/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    tasks.value = tasks.value.filter((task) => task.id !== id);
+    error.value = "";
+  } catch (err) {
+    error.value = `Brisanje nije uspjelo: ${err.message}`;
+  }
+}
+
+onMounted(loadTasks);
 </script>
 
 <template>
@@ -83,10 +147,18 @@ function deleteTask(id) {
           <button type="submit">+ Dodaj</button>
         </form>
 
+        <p v-if="error" style="color: red">
+          {{ error }}
+        </p>
+
         <div v-if="tasks.length" class="task-list">
           <article v-for="task in tasks" :key="task.id" class="task-item">
             <label class="task-label">
-              <input v-model="task.done" type="checkbox" />
+              <input
+                type="checkbox"
+                :checked="task.done"
+                @change="toggleTask(task)"
+              />
               <span :class="{ completed: task.done }">
                 {{ task.title }}
               </span>
