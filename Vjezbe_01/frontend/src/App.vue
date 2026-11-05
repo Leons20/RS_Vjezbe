@@ -6,6 +6,8 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const tasks = ref([]);
 const newTask = ref("");
 const error = ref("");
+const syntheticData = ref(null);
+const dataError = ref("");
 
 const completed = computed(
   () => tasks.value.filter((task) => task.done).length,
@@ -94,7 +96,27 @@ async function deleteTask(id) {
   }
 }
 
-onMounted(loadTasks);
+async function loadSyntheticData() {
+  try {
+    dataError.value = "";
+
+    const response = await fetch("/podaci.json");
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    syntheticData.value = await response.json();
+  } catch (err) {
+    dataError.value = `Ne mogu učitati sintetičke podatke: ${err.message}`;
+    console.error(err);
+  }
+}
+
+onMounted(() => {
+  loadTasks();
+  loadSyntheticData();
+});
 </script>
 
 <template>
@@ -198,6 +220,103 @@ onMounted(loadTasks);
             ></div>
           </div>
         </div>
+      </section>
+
+      <section class="synthetic-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Sintetički podaci</h2>
+            <p>Podaci dohvaćeni iz vanjskih izvora pomoću Pythona.</p>
+          </div>
+          <span class="counter">JSON podaci</span>
+        </div>
+
+        <p v-if="dataError" class="data-error">
+          {{ dataError }}
+        </p>
+
+        <template v-if="syntheticData">
+          <h3>Statistika zadataka</h3>
+
+          <div class="stats">
+            <article class="stat-card">
+              <span>Ukupno zadataka</span>
+              <strong>{{ syntheticData.statistics.total_tasks }}</strong>
+            </article>
+
+            <article class="stat-card">
+              <span>Završeno</span>
+              <strong>{{ syntheticData.statistics.completed_tasks }}</strong>
+            </article>
+
+            <article class="stat-card">
+              <span>Preostalo</span>
+              <strong>{{ syntheticData.statistics.pending_tasks }}</strong>
+            </article>
+          </div>
+
+          <div class="synthetic-section">
+            <p>
+              Uspješnost izvršavanja:
+              <strong
+                >{{ syntheticData.statistics.completion_percentage }}%</strong
+              >
+            </p>
+            <p>
+              Prosječno vrijeme završetka:
+              <strong>{{
+                syntheticData.statistics.average_completion_time
+              }}</strong>
+            </p>
+          </div>
+
+          <h3>Sintetički zadaci</h3>
+
+          <div class="synthetic-section">
+            <article
+              v-for="task in syntheticData.tasks"
+              :key="task.id"
+              class="synthetic-item"
+            >
+              <div>
+                <strong>{{ task.title }}</strong>
+                <p>
+                  Status:
+                  {{ task.done ? "Završeno" : "U tijeku" }}
+                </p>
+              </div>
+
+              <span class="counter">{{ task.priority }}</span>
+            </article>
+          </div>
+
+          <h3>Korisnici</h3>
+
+          <div class="synthetic-section">
+            <article
+              v-for="user in syntheticData.users"
+              :key="user.id"
+              class="synthetic-item"
+            >
+              <div>
+                <strong>{{ user.name }}</strong>
+                <p>{{ user.role }}</p>
+              </div>
+
+              <span class="user-status" :class="{ inactive: !user.active }">
+                {{ user.active ? "Aktivan" : "Neaktivan" }}
+              </span>
+            </article>
+          </div>
+        </template>
+
+        <p v-else-if="!dataError" class="empty-state">
+          Učitavanje sintetičkih podataka...
+        </p>
+
+        <button class="reload-btn" type="button" @click="loadSyntheticData">
+          ↻ Osvježi sintetičke podatke
+        </button>
       </section>
 
       <footer>Izrađeno s Vue.js 3 · Jednostavno i učinkovito.</footer>
@@ -477,6 +596,94 @@ footer {
   .task-form input {
     width: 100%;
     flex-basis: 100%;
+  }
+}
+
+.synthetic-panel {
+  margin-top: 24px;
+  padding: 28px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 35px #0f172a08;
+}
+
+.synthetic-panel h3 {
+  margin: 28px 0 14px;
+  font-size: 17px;
+}
+
+.synthetic-section {
+  padding: 14px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.synthetic-section p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.synthetic-item {
+  min-height: 65px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.synthetic-item strong {
+  font-size: 14px;
+}
+
+.synthetic-item p {
+  margin: 5px 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.user-status {
+  color: #059669;
+  background: #ecfdf5;
+  border-radius: 20px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.user-status.inactive {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.data-error {
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.reload-btn {
+  margin-top: 20px;
+  padding: 11px 16px;
+  color: white;
+  background: #4f46e5;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.reload-btn:hover {
+  background: #4338ca;
+}
+
+@media (max-width: 600px) {
+  .synthetic-panel {
+    padding: 18px;
+  }
+
+  .synthetic-item {
+    align-items: flex-start;
+    padding: 12px 0;
   }
 }
 </style>

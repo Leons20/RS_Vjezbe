@@ -1,0 +1,55 @@
+{
+    "tasks": [
+        {
+            "id": 1,
+            "title": "Izraditi početnu stranicu",
+            "done": true,
+            "priority": "Visoki"
+        },
+        {
+            "id": 2,
+            "title": "Povezati frontend i backend",
+            "done": true,
+            "priority": "Visoki"
+        },
+        {
+            "id": 3,
+            "title": "Dodati autentifikaciju",
+            "done": false,
+            "priority": "Srednji"
+        },
+        {
+            "id": 4,
+            "title": "Testirati API",
+            "done": false,
+            "priority": "Niski"
+        }
+    ],
+    "users": [
+        {
+            "id": 1,
+            "name": "Ana Horvat",
+            "role": "Administrator",
+            "active": true
+        },
+        {
+            "id": 2,
+            "name": "Marko Kovač",
+            "role": "Korisnik",
+            "active": true
+        },
+        {
+            "id": 3,
+            "name": "Ivana Marić",
+            "role": "Korisnik",
+            "active": false
+        }
+    ],
+    "statistics": {
+        "total_tasks": 4,
+        "completed_tasks": 2,
+        "pending_tasks": 2,
+        "completion_percentage": 50,
+        "average_completion_time": "2 dana"
+    }
+}
